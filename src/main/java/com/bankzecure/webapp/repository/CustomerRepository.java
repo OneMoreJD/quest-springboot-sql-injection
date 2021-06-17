@@ -1,6 +1,7 @@
 package com.bankzecure.webapp.repository;
 
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.ResultSet;
@@ -15,14 +16,16 @@ public class CustomerRepository {
 
   public Customer findByIdentifierAndPassword(final String identifier, final String password) {
     Connection connection = null;
-    Statement statement = null;
+    PreparedStatement statement = null;
     ResultSet resultSet = null;
     try {
       connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-      statement = connection.createStatement();
-      final String query = "SELECT * FROM customer " +
-        "WHERE identifier = '" + identifier + "' AND password = '" + password + "'";
-      resultSet = statement.executeQuery(query);
+      final String query = "SELECT * FROM customer WHERE identifier = ? AND password = ?";
+      statement = connection.prepareStatement(query);
+      statement.setString(1, identifier);
+      statement.setString(2, password);
+      
+      resultSet = statement.executeQuery();
 
       Customer customer = null;
 
@@ -48,7 +51,7 @@ public class CustomerRepository {
   public Customer update(String identifier, String newEmail, String newPassword) {
 
     Connection connection = null;
-    Statement statement = null;
+    PreparedStatement statement = null;
     ResultSet resultSet = null;
     Customer customer = null;
     try {
@@ -56,7 +59,6 @@ public class CustomerRepository {
         connection = DriverManager.getConnection(
           DB_URL, DB_USERNAME, DB_PASSWORD
         );
-        statement = connection.createStatement();
 
         // Build the update query using a QueryBuilder
         StringBuilder queryBuilder = new StringBuilder();
@@ -65,17 +67,21 @@ public class CustomerRepository {
         if (newPassword != "") {
           queryBuilder.append(",password = '" + newPassword + "'");
         }
-        queryBuilder.append(" WHERE identifier = '" + identifier + "'");
+        queryBuilder.append(" WHERE identifier = ?");
         String query = queryBuilder.toString();
-        statement.executeUpdate(query);
+
+        statement = connection.prepareStatement(query);
+        statement.setString(1, identifier);
+        statement.executeUpdate();
 
         JdbcUtils.closeStatement(statement);
         JdbcUtils.closeConnection(connection);
 
         connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-        statement = connection.createStatement();
-        query = "SELECT * FROM customer WHERE identifier = '" + identifier + "'";
-        resultSet = statement.executeQuery(query);
+        query = "SELECT * FROM customer WHERE identifier = ?";
+        statement = connection.prepareStatement(query);
+        statement.setString(1, identifier);
+        resultSet = statement.executeQuery();
 
         if (resultSet.next()) {
           final int id = resultSet.getInt("id");
